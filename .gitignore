@@ -1,0 +1,8 @@
+.env
+output
+__pycache__
+cache
+source-assets/
+static/images/
+.ipynb_checkpoints/
+static/audio/

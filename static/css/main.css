@@ -1,0 +1,121 @@
+html {
+    padding:0px;
+    margin:0px;
+}
+
+body {
+    overflow: hidden;
+    padding:0px;
+    margin:0px;
+    font-family: "Arial";
+    color: none;
+    background-color: black;
+}
+
+.container {
+    margin: 50px;
+}
+
+.navbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.navbar .home img {
+    width: 50px;
+}
+
+.navbar .menu a {
+    color: white;
+    text-decoration: none;
+}
+
+.bgvideo {
+    position: fixed; 
+    top: 0; 
+    right: 0; 
+    width: 100%; 
+    height: 100%; 
+    z-index:-1;
+    pointer-events: none; 
+    overflow:hidden;
+}
+
+.bgvideo iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.controls {
+    width: 90%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.controls a {
+    font-size: 50px;
+    text-decoration: none;
+    color: white;
+}
+
+.videoLinks ul {
+    list-style-type: square;
+}
+.videoLinks ul li {
+    cursor: pointer;
+}
+.videoLinks ul .selected {
+    text-decoration: underline;
+}
+
+.img-gallery {
+    --frame-width: 0px;
+    --mat-width: 0px;
+    --frame-shadow-color: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    row-gap: 50px;
+    align-items: flex-start;
+}
+
+.img-gallery-item {
+    margin: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.img-frame {
+    padding: var(--mat-width);
+    background-color: white;
+    border: var(--frame-width) solid black;
+    box-shadow: 0px 0px 15px var(--frame-shadow-color), 0px 0px 10px black inset;
+}
+
+.img-gallery-item img {
+    border: 1px solid #eee;
+}
+
+video {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}
+
+#hud {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
