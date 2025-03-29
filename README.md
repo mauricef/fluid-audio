@@ -24,4 +24,4 @@ python server.py
 
 ## Running the Client
 
-To run the client, go to https://localhost:5000?=mode=server and https://localhost:5000?=mode=hud in your browser.
+To run the client, go to https://localhost:5000?mode=server and https://localhost:5000?mode=hud in your browser.
