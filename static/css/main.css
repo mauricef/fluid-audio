@@ -9,7 +9,7 @@ body {
     margin:0px;
     font-family: "Arial";
     color: none;
-    background-color: black;
+    background-color: black !important;
 }
 
 .container {
@@ -118,4 +118,30 @@ video {
     width: 100%;
     height: 100%;
     z-index: 1;
+}
+
+.property-name {
+  max-width: 200px !important;
+}
+.dg .cr:hover {
+  background-color: #444444 !important; /* A slightly lighter gray, or choose your preferred highlight color */
+  /* You could also use other properties, e.g., a subtle border */
+  /* border-left: 3px solid #55ceff !important; */
+}
+
+/* Make sure this CSS is loaded *after* any default dat.GUI CSS,
+   or use !important strategically. */
+
+
+/* --- New CSS for MIDI-activated Slider Bar --- */
+
+/* When a row has the 'midi-highlight' class, style its slider's TRACK */
+.midi-highlight .slider {
+  background-color: #454545 !important; /* Example: A slightly different/darker track color */
+}
+
+/* When a row has the 'midi-highlight' class, style its slider's FILL/THUMB */
+.midi-highlight .slider .slider-fg {
+  background: #FF0000 !important; /* Example: Bright blue for the fill */
+  background-color: #FF0000 !important; /* Example: Bright blue for the fill */
 }

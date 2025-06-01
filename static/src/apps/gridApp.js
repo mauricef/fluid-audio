@@ -61,24 +61,24 @@ export class GridApp {
         this.gl = gl
         this.pg = new ShaderProgram({gl, vs:VS, fs:FS, blend: gl.ONE_MINUS_SRC_ALPHA})
         this.PROPS = [
-            ['GridBlockCount', .5],
-            ['GridBorder', .05],
-            ['GridMargin', .1],
-            ['GridBlur', .1],
-            ['GridAlpha', 0]
+            ['BlockAlpha', 0],
+            ['GridSize', 0],
+            ['BlockCount', .5],
+            ['BlockMargin', .1],
+            ['BlockBlur', .1]
         ]
     }
     execute({timestamp, params, audioPowerTexture, colorTexture}, fbi) {
-        if (params.GridAlpha > 0) {
+        if (params.BlockAlpha > 0) {
             this.pg.execute({
                 params: params, 
                 uAudio: audioPowerTexture,
-                uGridDim: [BLOCK_MAX * params.GridBlockCount, BLOCK_MAX * params.GridBlockCount],
-                uMargin: 1. - params.GridMargin,
-                uBorder: params.GridBorder,
-                uBlur: params.GridBlur,
+                uGridDim: [BLOCK_MAX * params.BlockCount, BLOCK_MAX * params.BlockCount],
+                uMargin: 1. - params.BlockMargin,
+                uBorder: (1 - params.GridSize),
+                uBlur: params.BlockBlur,
                 uColor: colorTexture,
-                uAlpha: params.GridAlpha
+                uAlpha: params.BlockAlpha
             }, fbi)
     
         }

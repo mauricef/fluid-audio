@@ -1,3 +1,5 @@
+.DS_Store
+venv/
 .env
 output
 __pycache__

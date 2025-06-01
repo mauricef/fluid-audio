@@ -1,7 +1,29 @@
 import { clamp01, toLogScale01 } from "./math.js"
 import { SendChannel, RecieveChannel } from "./channel.js"
 
-const MIDI_MAPPING_STR = '[["r1c1","s16"],["r1c2","s20"],["r1c3","s24"],["r1c4","s28"],["r1c5","s46"],["r1c6","s50"],["r1c7","s54"],["r1c8","s58"],["r2c1","s17"],["r2c2","s21"],["r2c3","s25"],["r2c4","s29"],["r2c5","s47"],["r2c6","s51"],["r2c7","s55"],["r2c8","s59"],["r2c9","b25"],["r3c1","s18"],["r3c2","s22"],["r3c3","s26"],["r3c4","s30"],["r3c5","s48"],["r3c6","s52"],["r3c7","s56"],["r3c8","s60"],["r3c9","b26"],["r4c1","b1"],["r4c2","b4"],["r4c3","b7"],["r4c4","b10"],["r4c5","b13"],["r4c6","b16"],["r4c7","b19"],["r4c8","b22"],["r4c9","b27"],["r5c1","b3"],["r5c2","b6"],["r5c3","b9"],["r5c4","b12"],["r5c5","b15"],["r5c6","b18"],["r5c7","b21"],["r5c8","b24"],["r6c1","s19"],["r6c2","s23"],["r6c3","s27"],["r6c4","s31"],["r6c5","s49"],["r6c6","s53"],["r6c7","s57"],["r6c8","s61"],["r6c9","s62"]]'
+const MIDI_MAPPING_STR = '[["r1c1","s16"],\
+["r1c2","s20"],\
+["r1c3","s24"],\
+["r1c4","s28"],\
+["r1c5","s46"],\
+["r1c6","s50"],\
+["r1c7","s54"],\
+["r1c8","s58"],\
+["r2c1","s55"],\
+["r2c2","s59"],\
+["r2c7","s48"],\
+["r2c3","s18"],\
+["r2c4","s22"],\
+["r2c5","s26"],\
+["r2c6","s30"],\
+["r2c8","s19"],\
+["r3c1","s23"],\
+["r3c2","s27"],\
+["r3c3","s31"],\
+["r3c4","s49"],\
+["r3c5","s53"],\
+["r3c6","s57"],\
+["r3c7","s61"]]'
 
 
 class MidiMapper {
@@ -61,6 +83,7 @@ class Hud {
         document.body.appendChild(this.stats.dom)
         
         this.canvas = canvas
+        this.midiHighlightTimeouts = {}; // To manage highlight timeouts
         this.hudChannel = new RecieveChannel('Hud', this)
         this.serverChannel = new SendChannel('Server')
         this.serverChannel.send('HudRequestProps')
@@ -70,28 +93,59 @@ class Hud {
         this.midi.onMidiValueChanged = this.onMidiValueChanged.bind(this)
         this.midi.load()
     }
+
     onMidiButtonDown(gridKey) {
-        console.log(['onMidiButtonDown', gridKey])
-        let controllerMapping = this.midiPropertyMapping[gridKey]
-        if (controllerMapping) {
-            this.params[controllerMapping.propertyName]()   
+        let controllerMapping = this.midiPropertyMapping[gridKey];
+        if (controllerMapping && typeof this.params[controllerMapping.propertyName] === 'function') {
+            this.params[controllerMapping.propertyName]();
+            this.applyMidiHighlight(gridKey); // Apply highlight
         }
     }
+    
     onMidiButtonUp(gridKey) {
-        console.log(['onMidiButtonUp', gridKey])
+      console.log(['onMidiButtonUp', gridKey])
+      return;
     }
+
     onMidiValueChanged(gridKey, value) {
-        let controllerMapping = this.midiPropertyMapping[gridKey]
+        let controllerMapping = this.midiPropertyMapping[gridKey];
         if (controllerMapping) {
-            this.updateParameter(controllerMapping.propertyName, value / 128)
-            controllerMapping.controller.updateDisplay()    
+            this.updateParameter(controllerMapping.propertyName, value / 128);
+            if (controllerMapping.controller && typeof controllerMapping.controller.updateDisplay === 'function') {
+                controllerMapping.controller.updateDisplay();
+            }
+            this.applyMidiHighlight(gridKey); // Apply highlight
+        }
+    }
+
+    applyMidiHighlight(gridKey) {
+        if (!this.midiPropertyMapping || !this.midiPropertyMapping[gridKey]) {
+            return;
+        }
+
+        const controller = this.midiPropertyMapping[gridKey].controller;
+        if (controller && controller.domElement) {
+            const domElement = controller.domElement;
+
+            // Clear any existing timeout for this specific element to prevent flickering
+            if (this.midiHighlightTimeouts[gridKey]) {
+                clearTimeout(this.midiHighlightTimeouts[gridKey]);
+            }
+
+            domElement.classList.add('midi-highlight');
+
+            // Set a new timeout to remove the class
+            this.midiHighlightTimeouts[gridKey] = setTimeout(() => {
+                domElement.classList.remove('midi-highlight');
+                delete this.midiHighlightTimeouts[gridKey]; // Clean up
+            }, 500); // Highlight duration in milliseconds (e.g., 500ms = 0.5 seconds)
         }
     }
     
     updateParameter(key, value) {
         this.params[key] = value
         this.serverChannel.send('HudParameterChange', {key, value})
-        console.log({key, value})
+        // console.log({key, value})
     }
     onMessage(event) {
         let {name, context} = event.data

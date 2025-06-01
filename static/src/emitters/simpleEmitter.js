@@ -59,9 +59,9 @@ export class SimpleEmitterKernel {
             ['ColorRadius', .25],
             ['ColorRelBlur', .25],
             ['ColorHue', .5],
-            ['ColorAlpha', .5],
-            ['VelocityRelRadius', .25],
-            ['VelocityMagnitude', .5],
+            ['JetColorAlpha', .5],
+            ['JetLength', .25],
+            ['JetSpeed', .5],
             ['VelocityTheta', .5],
         ]
         this.gl = gl
@@ -73,19 +73,19 @@ export class SimpleEmitterKernel {
     }
     execute({params}) {
         let colorRadius = params.ColorRadius * RADIUS_SCALE
-        let velocityRadius = params.VelocityRelRadius * colorRadius
+        let velocityRadius = params.JetLength * colorRadius
         this.colorKernel.execute({
             uAspectRatio: this.aspectRatio,
             uRadius: colorRadius,
             uBlur: params.ColorRelBlur * colorRadius,
             uHue: params.ColorHue,
-            uAlpha: params.ColorAlpha,
+            uAlpha: params.JetColorAlpha,
         }, this.colorBuffer)
 
         this.velocityKernel.execute({
             uAspectRatio: this.aspectRatio,
             uRadius: velocityRadius,
-            uMagnitude: params.VelocityMagnitude * VELOCITY_MAGNITUDE_SCALE,
+            uMagnitude: params.JetSpeed * VELOCITY_MAGNITUDE_SCALE,
             uTheta: params.VelocityTheta,
         }, this.velocityBuffer)       
     }
