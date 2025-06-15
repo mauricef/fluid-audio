@@ -30,8 +30,8 @@ export class SimpleJetApp {
             dt: fluidParams.DT,
             subSteps: fluidParams.SUBSTEPS,
             pressureSteps: fluidParams.PRESSURE_STEPS,
-            colorDecay: params.colorDecay,
-            velocityDecay: params.velocityDecay,
+            GlobalAlphaDecay: params.GlobalAlphaDecay,
+            GlobalSpeedDecay: params.GlobalSpeedDecay,
             colorUpdateBuffer: this.emitter.colorBuffer,
             velocityUpdateBuffer: this.emitter.velocityBuffer
         })

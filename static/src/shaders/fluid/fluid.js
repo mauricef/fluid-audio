@@ -71,8 +71,8 @@ function createQuad(gl, bbox) {
 export class FluidApp {
     constructor({gl, canvas, size}) {
         this.PROPS = [
-            ['colorDecay', .015],
-            ['velocityDecay', 0],
+            ['GlobalAlphaDecay', .5],
+            ['GlobalSpeedDecay', .5],
         ]
         this.gl = gl
         this.GL = new GLHelper(gl, {es100: true})
@@ -231,7 +231,7 @@ export class FluidApp {
         twgl.bindFramebufferInfo(this.gl, this.pressure[1])
         this.gl.clear(this.gl.COLOR_BUFFER_BIT)
     }
-    step({dt, pressureSteps, colorDecay, velocityDecay}) {
+    step({dt, pressureSteps, GlobalAlphaDecay, GlobalSpeedDecay}) {
         this.divergenceUpdate({
             uAspectRatio: this.aspectRatio,
             texelSize: this.texelSize,
@@ -260,7 +260,7 @@ export class FluidApp {
             velocity: this.velocityBuffer,
             target: this.velocityBuffer,
             dt: dt,
-            uDecay: velocityDecay
+            uDecay: GlobalSpeedDecay
         })
 
         this.advectionUpdate({
@@ -268,17 +268,17 @@ export class FluidApp {
             velocity: this.velocityBuffer,
             target: this.dyeBuffer,
             dt: dt,
-            uDecay: colorDecay
+            uDecay: GlobalAlphaDecay
         })
     }
-    execute({dt, subSteps, pressureSteps, colorDecay, velocityDecay, colorUpdateBuffer, velocityUpdateBuffer}) {
+    execute({dt, subSteps, pressureSteps, GlobalAlphaDecay, GlobalSpeedDecay, colorUpdateBuffer, velocityUpdateBuffer}) {
         this.updateColor(colorUpdateBuffer)
         this.updateVelocity(velocityUpdateBuffer)
         for (let i = 0; i < Math.floor(subSteps); i++) {
             this.step({
                 dt: dt / subSteps,
-                velocityDecay: velocityDecay,
-                colorDecay: colorDecay,
+                GlobalSpeedDecay: GlobalSpeedDecay,
+                GlobalAlphaDecay: GlobalAlphaDecay,
                 pressureSteps: pressureSteps,
             })            
         }
