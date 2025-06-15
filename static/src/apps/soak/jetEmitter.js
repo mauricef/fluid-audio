@@ -171,12 +171,12 @@ export class JetEmitter {
         this.gridApp = new GridApp({gl})
         
         this.PROPS = [
-            ['ColorAlpha', 1.],
-            ['CircleRotate', .5],
-            ['CircleRadius', .5],
-            ['ColorRadiusRelMax', .5],
-            ['VelocityRelRadius', .25],
-            ['VelocityMagnitude', .5],
+            ['JetColorAlpha', 1.],
+            ['JetSourceSize', .5],
+            ['PerimeterRotate', .5],
+            ['PerimeterRadius', .5],
+            ['JetLength', .25],
+            ['JetSpeed', .5],
             ['JetRotate', .5],
             ['SpiralLoops', 0],
             ['SpiralInward', 1]
@@ -230,12 +230,12 @@ export class JetEmitter {
         let JET_COUNT = params.JetCount * MAX_JET_COUNT
         this.ensureBuffers(JET_COUNT)
         let {gl} = this
-        let circleOffsetFreq = -1 * (2 * params.CircleRotate - 1)
+        let circleOffsetFreq = -1 * (2 * params.PerimeterRotate - 1)
         circleOffsetFreq =  (Math.abs(circleOffsetFreq) < .1) ? 0 :circleOffsetFreq
         this.circleOffset += (circleOffsetFreq * .01) % 1.
 
         this.locationShader.execute({
-            radius: params.CircleRadius,
+            radius: params.PerimeterRadius,
             uThetaOffset: this.circleOffset,
             uSpiralLoops: 10 * params.SpiralLoops,
             uSpiralInward: params.SpiralInward,
@@ -243,14 +243,14 @@ export class JetEmitter {
 
         this.colorShader.execute({}, this.colorFbi)
 
-        let maxJetRadius = .5 * 2 * Math.PI * params.CircleRadius / JET_COUNT
+        let maxJetRadius = .5 * 2 * Math.PI * params.PerimeterRadius / JET_COUNT
         this.colorRadiusShader.execute({
-            uMax: maxJetRadius * params.ColorRadiusRelMax,
+            uMax: maxJetRadius * params.JetSourceSize,
             uAudioPowerTexture: audioPowerTexture
         }, this.colorRadiusFbi)
 
         this.velocityRadiusShader.execute({
-            uScale: params.VelocityRelRadius,
+            uScale: params.JetLength,
             uRadiusTexture: this.colorRadiusFbi.attachments[0],
         }, this.velocityRadiusFbi)
 
@@ -258,7 +258,7 @@ export class JetEmitter {
         thetaOffsetFreq =  (Math.abs(thetaOffsetFreq) < .1) ? 0 :thetaOffsetFreq
         this.thetaOffset += (thetaOffsetFreq * .01) % 1.
         this.velocityVectorShader.execute({
-            uMagnitude: VELOCITY_MAGNITUDE_MAX * params.VelocityMagnitude,
+            uMagnitude: VELOCITY_MAGNITUDE_MAX * params.JetSpeed,
             uAudioPowerTexture: audioPowerTexture,
             uThetaOffset: this.thetaOffset
         }, this.velocityVectorFbi)
@@ -266,15 +266,15 @@ export class JetEmitter {
         twgl.bindFramebufferInfo(this.gl, this.colorBuffer)
         this.gl.clear(gl.COLOR_BUFFER_BIT)
         twgl.bindFramebufferInfo(this.gl, null)
-        if (params.ColorAlpha > 0) {
+        if (params.JetColorAlpha > 0) {
             this.colorEmitter.render( {
                 radiusTexture: this.colorRadiusFbi.attachments[0],
                 locationTexture: this.locationFbi.attachments[0],
                 valueTexture: colorTexture // this.colorFbi.attachments[0]
-            }, this.colorBuffer, params.ColorAlpha, Math.ceil(JET_COUNT))
+            }, this.colorBuffer, params.JetColorAlpha, Math.ceil(JET_COUNT))
         }
 
-        if (params.GridAlpha > 0) {
+        if (params.BlockAlpha > 0) {
             this.gridApp.execute({
                 timestamp, 
                 params,
