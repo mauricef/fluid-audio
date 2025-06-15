@@ -22,12 +22,6 @@ To run a simple HTTP server with SSLon port 5000, or the next available port:
 python server.py
 ```
 
-## Running the Client
-
-To run the client, go to https://localhost:5000?=mode=server and https://localhost:5000?=mode=hud in your browser.
-
-
-
 r1c1 - JetCount: number of jets
 r1c2 - JetColorAlpha: how much of the jet color are you mixing in - 0 means won't see jets, but jets will still be disturbing the fluid
 r1c3 - PerimeterRotate: jets rotating
@@ -51,3 +45,8 @@ r3c4 - AudioGain: max it for craziness
 r3c5 - ColorXStart: same as audio kind of
 r3c6 - ColorXLength: same as audio. longer length and lower start mean more colors
 r3c7 - ColorYDrift - scans through image and changes color of jets slow or fast
+
+
+
+## Running the Client
+To run the client, go to https://localhost:5000?mode=server and https://localhost:5000?mode=hud in your browser.

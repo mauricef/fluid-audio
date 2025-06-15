@@ -52,8 +52,8 @@ hostname = socket.gethostname()
 local_ip = socket.gethostbyname(hostname)
 
 print(f"Serving at:")
-print(f"Local: https://localhost:{PORT}")
-print(f"Network: https://{local_ip}:{PORT}")
+print(f"Local: https://localhost:{PORT}?mode=server https://localhost:{PORT}?mode=hud")
+print(f"Network: https://{local_ip}:{PORT}?mode=server https://{local_ip}:{PORT}?mode=hud")
 print("Note: You will need to accept the self-signed certificate warning in your browser")
 
 httpd.serve_forever() 
