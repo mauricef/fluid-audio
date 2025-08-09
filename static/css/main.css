@@ -123,6 +123,28 @@ video {
 .property-name {
   max-width: 200px !important;
 }
+
+/* Ensure dat.GUI rows have enough space for expanded LFO panels */
+.dg .cr {
+  position: relative;
+  z-index: 1;
+  min-height: 32px; /* Increase base height for LFO buttons */
+}
+
+.dg .cr.has-slider {
+  min-height: 36px; /* Extra height for slider rows */
+}
+
+/* When a parent row has an expanded LFO panel */
+.dg .cr.lfo-expanded {
+  z-index: 50;
+  /* No extra margin needed since we use overlay positioning */
+}
+
+/* Ensure expanded LFO panels appear above other elements */
+.lfo-panel.expanded {
+  z-index: 150;
+}
 .dg .cr:hover {
   background-color: #444444 !important; /* A slightly lighter gray, or choose your preferred highlight color */
   /* You could also use other properties, e.g., a subtle border */
@@ -144,4 +166,376 @@ video {
 .midi-highlight .slider .slider-fg {
   background: #FF0000 !important; /* Example: Bright blue for the fill */
   background-color: #FF0000 !important; /* Example: Bright blue for the fill */
+}
+
+/* ========== LFO Panel Styles ========== */
+.lfo-container {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  pointer-events: none; /* Allow clicks to pass through to underlying controls */
+}
+
+.lfo-panel {
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 100;
+  pointer-events: all; /* Re-enable pointer events for the panel itself */
+  width: auto;
+}
+
+.lfo-panel.lfo-active {
+  border-color: #00ff88;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+}
+
+.lfo-header {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  background: transparent;
+  border-bottom: none;
+  min-height: 24px; /* Ensure minimum height for buttons */
+  gap: 2px;
+}
+
+.lfo-toggle, .lfo-expand {
+  background: none;
+  border: 1px solid #666;
+  color: #ccc;
+  width: 18px;
+  height: 16px;
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  transition: all 0.2s ease;
+  padding: 0;
+  margin: 0;
+}
+
+.lfo-toggle:hover, .lfo-expand:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #888;
+}
+
+.lfo-panel.lfo-active .lfo-toggle {
+  background: #00ff88;
+  color: black;
+  border-color: #00ff88;
+}
+
+.lfo-indicator {
+  display: none; /* Hide indicator to save space */
+}
+
+.lfo-controls {
+  display: none;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.95);
+  position: fixed;
+  z-index: 1000;
+  border: 1px solid #444;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+  min-height: 180px;
+  width: 280px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.lfo-panel.expanded .lfo-controls {
+  display: block;
+}
+
+.lfo-control-group {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lfo-control-group label {
+  color: #ccc;
+  font-size: 11px;
+  min-width: 40px;
+  font-weight: bold;
+}
+
+.lfo-control-group select,
+.lfo-control-group input[type="range"] {
+  flex: 1;
+  min-width: 60px;
+}
+
+.lfo-control-group select {
+  background: #333;
+  color: #ccc;
+  border: 1px solid #666;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 11px;
+}
+
+.lfo-control-group input[type="range"] {
+  height: 20px;
+  background: #333;
+  outline: none;
+  border-radius: 10px;
+}
+
+.lfo-control-group input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00ff88;
+  cursor: pointer;
+  border: 2px solid #333;
+}
+
+.lfo-control-group input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #00ff88;
+  cursor: pointer;
+  border: 2px solid #333;
+}
+
+.lfo-control-group span {
+  color: #aaa;
+  font-size: 10px;
+  min-width: 50px;
+  text-align: right;
+}
+
+.lfo-checkboxes {
+  flex-direction: row;
+  gap: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #ccc;
+  font-size: 11px;
+  cursor: pointer;
+  min-width: auto !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin: 0;
+}
+
+.lfo-visualizer {
+  margin: 8px 0;
+  text-align: center;
+}
+
+.lfo-wave-canvas {
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 3px;
+  width: 100%;
+  max-width: 200px;
+  height: 60px;
+}
+
+.lfo-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.lfo-actions button {
+  flex: 1;
+  background: #444;
+  color: #ccc;
+  border: 1px solid #666;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lfo-actions button:hover {
+  background: #555;
+  border-color: #888;
+}
+
+/* ========== Mobile Responsiveness ========== */
+@media (max-width: 768px) {
+  /* Make dat.GUI more mobile friendly */
+  .dg.main {
+    position: fixed !important;
+    top: 10px !important;
+    right: 10px !important;
+    left: 10px !important;
+    width: auto !important;
+    max-height: calc(100vh - 20px);
+    overflow-y: auto;
+    z-index: 1000;
+  }
+  
+  .dg .cr {
+    border-left: none !important;
+    min-height: 44px; /* Larger touch targets */
+    position: relative;
+    z-index: 1;
+  }
+  
+  .dg .cr.lfo-expanded {
+    /* No extra margin needed on mobile either since we use overlay positioning */
+  }
+  
+  .dg .c {
+    float: none !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+  
+  .dg .property-name {
+    width: 50% !important;
+    max-width: none !important;
+    font-size: 14px !important;
+    padding: 8px !important;
+  }
+  
+  .dg .c input[type="text"] {
+    width: 50% !important;
+    font-size: 16px !important; /* Prevent zoom on iOS */
+    padding: 8px !important;
+  }
+  
+  .dg .slider {
+    width: 50% !important;
+    height: 44px !important; /* Larger touch target */
+  }
+  
+  .dg .slider-fg {
+    height: 44px !important;
+  }
+  
+  /* LFO panel mobile adjustments */
+  .lfo-panel {
+    margin: 4px 0;
+  }
+  
+  .lfo-control-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  
+  .lfo-control-group label {
+    min-width: auto;
+    margin-bottom: 2px;
+  }
+  
+  .lfo-control-group input[type="range"] {
+    height: 44px; /* Larger touch target */
+    min-width: auto;
+  }
+  
+  .lfo-control-group input[type="range"]::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .lfo-control-group input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .lfo-checkboxes {
+    flex-direction: row;
+    justify-content: space-around;
+  }
+  
+  .checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .lfo-actions button {
+    padding: 12px 8px;
+    font-size: 12px;
+    min-height: 44px;
+  }
+  
+  .lfo-toggle, .lfo-expand {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dg.main {
+    top: 5px !important;
+    right: 5px !important;
+    left: 5px !important;
+  }
+  
+  .lfo-control-group span {
+    font-size: 12px;
+    text-align: left;
+  }
+  
+  .lfo-wave-canvas {
+    height: 80px;
+  }
+}
+
+/* ========== Touch/Gesture Support ========== */
+.dg .slider {
+  touch-action: none; /* Prevent scrolling while dragging */
+}
+
+.lfo-control-group input[type="range"] {
+  touch-action: none;
+}
+
+/* Improve button accessibility */
+button, .dg .button {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+/* Better focus states for keyboard navigation */
+button:focus,
+input:focus,
+select:focus {
+  outline: 2px solid #00ff88;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .lfo-panel {
+    border-color: white;
+  }
+  
+  .lfo-toggle, .lfo-expand {
+    border-color: white;
+  }
+  
+  .lfo-panel.lfo-active {
+    border-color: lime;
+  }
 }

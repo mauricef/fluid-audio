@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LFO Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #222;
+            color: #ccc;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .parameter {
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 5px;
+        }
+        .parameter h3 {
+            margin: 0 0 10px 0;
+            color: #fff;
+        }
+        .value-display {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .control-group label {
+            font-size: 12px;
+        }
+        button {
+            padding: 8px 12px;
+            background: #444;
+            color: #ccc;
+            border: 1px solid #666;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #555;
+        }
+        button.active {
+            background: #00ff88;
+            color: black;
+        }
+        input[type="range"] {
+            width: 100px;
+        }
+        select {
+            background: #333;
+            color: #ccc;
+            border: 1px solid #666;
+            border-radius: 3px;
+            padding: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>LFO System Test</h1>
+        <p>This page tests the LFO system independently. Each parameter should have its own unique LFO instance.</p>
+        
+        <div id="parameters"></div>
+        
+        <div style="margin-top: 30px;">
+            <h3>Debug Info</h3>
+            <div id="debug-info" style="font-family: monospace; font-size: 12px; background: #111; padding: 10px; border-radius: 5px;"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { LFOManager } from './static/src/lfo.js';
+        
+        class LFOTest {
+            constructor() {
+                this.lfoManager = new LFOManager();
+                this.parameters = ['AudioStart', 'AudioLength', 'AudioGain', 'JetCount', 'JetSpeed'];
+                this.parameterValues = {};
+                
+                this.init();
+                this.startUpdateLoop();
+            }
+            
+            init() {
+                const container = document.getElementById('parameters');
+                
+                this.parameters.forEach(paramName => {
+                    // Initialize base value
+                    this.lfoManager.setBaseValue(paramName, 0.5);
+                    this.parameterValues[paramName] = 0.5;
+                    
+                    // Create UI
+                    const paramDiv = document.createElement('div');
+                    paramDiv.className = 'parameter';
+                    paramDiv.innerHTML = `
+                        <h3>${paramName}</h3>
+                        <div class="value-display" id="value-${paramName}">0.50</div>
+                        <div class="controls">
+                            <button id="toggle-${paramName}" onclick="window.lfoTest.toggleLFO('${paramName}')">Enable LFO</button>
+                            <div class="control-group">
+                                <label>Waveform</label>
+                                <select id="waveform-${paramName}" onchange="window.lfoTest.updateLFO('${paramName}')">
+                                    <option value="sine">Sine</option>
+                                    <option value="triangle">Triangle</option>
+                                    <option value="square">Square</option>
+                                    <option value="sawtooth">Sawtooth</option>
+                                    <option value="noise">Noise</option>
+                                </select>
+                            </div>
+                            <div class="control-group">
+                                <label>Rate (Hz)</label>
+                                <input type="range" id="rate-${paramName}" min="0.1" max="5" step="0.1" value="1" onchange="window.lfoTest.updateLFO('${paramName}')">
+                                <span id="rate-value-${paramName}">1.0</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Depth</label>
+                                <input type="range" id="depth-${paramName}" min="0" max="1" step="0.01" value="0.5" onchange="window.lfoTest.updateLFO('${paramName}')">
+                                <span id="depth-value-${paramName}">0.50</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Offset</label>
+                                <input type="range" id="offset-${paramName}" min="0" max="1" step="0.01" value="0.5" onchange="window.lfoTest.updateLFO('${paramName}')">
+                                <span id="offset-value-${paramName}">0.50</span>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(paramDiv);
+                });
+                
+                // Make this available globally for onclick handlers
+                window.lfoTest = this;
+            }
+            
+            toggleLFO(paramName) {
+                const lfo = this.lfoManager.getLFO(paramName);
+                lfo.setEnabled(!lfo.enabled);
+                
+                const button = document.getElementById(`toggle-${paramName}`);
+                button.textContent = lfo.enabled ? 'Disable LFO' : 'Enable LFO';
+                button.classList.toggle('active', lfo.enabled);
+                
+                this.updateDebugInfo();
+            }
+            
+            updateLFO(paramName) {
+                const lfo = this.lfoManager.getLFO(paramName);
+                const waveform = document.getElementById(`waveform-${paramName}`).value;
+                const rate = parseFloat(document.getElementById(`rate-${paramName}`).value);
+                const depth = parseFloat(document.getElementById(`depth-${paramName}`).value);
+                const offset = parseFloat(document.getElementById(`offset-${paramName}`).value);
+                
+                lfo.updateParams({
+                    waveform,
+                    rate,
+                    depth,
+                    offset
+                });
+                
+                // Update value displays
+                document.getElementById(`rate-value-${paramName}`).textContent = rate.toFixed(1);
+                document.getElementById(`depth-value-${paramName}`).textContent = depth.toFixed(2);
+                document.getElementById(`offset-value-${paramName}`).textContent = offset.toFixed(2);
+                
+                this.updateDebugInfo();
+            }
+            
+            startUpdateLoop() {
+                const update = (timestamp) => {
+                    // Update all parameter values
+                    this.parameters.forEach(paramName => {
+                        const value = this.lfoManager.getValue(paramName, timestamp);
+                        this.parameterValues[paramName] = value;
+                        
+                        const valueDisplay = document.getElementById(`value-${paramName}`);
+                        valueDisplay.textContent = value.toFixed(3);
+                        
+                        // Color code based on whether LFO is active
+                        const lfo = this.lfoManager.getLFO(paramName);
+                        valueDisplay.style.color = lfo.enabled ? '#00ff88' : '#ccc';
+                    });
+                    
+                    requestAnimationFrame(update);
+                };
+                
+                requestAnimationFrame(update);
+            }
+            
+            updateDebugInfo() {
+                const debugDiv = document.getElementById('debug-info');
+                let debugText = 'LFO States:\n';
+                
+                this.parameters.forEach(paramName => {
+                    const lfo = this.lfoManager.getLFO(paramName);
+                    const state = lfo.getState();
+                    debugText += `${paramName}: enabled=${state.enabled}, waveform=${state.waveform}, rate=${state.rate}, depth=${state.depth}\n`;
+                });
+                
+                debugDiv.textContent = debugText;
+            }
+        }
+        
+        // Start the test
+        new LFOTest();
+    </script>
+</body>
+</html>
