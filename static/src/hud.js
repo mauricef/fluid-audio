@@ -251,6 +251,47 @@ class Hud {
             }
         })
     }
+    
+    resetParameter(paramName, defaultValue) {
+        // Reset a single parameter to its default value
+        this.params[paramName] = defaultValue
+        this.lfoManager.setBaseValue(paramName, defaultValue)
+        this.serverChannel.send('HudParameterChange', {key: paramName, value: defaultValue})
+        
+        // Update the specific controller display
+        const controller = this.getControllerByProperty(paramName)
+        if (controller) {
+            controller.updateDisplay()
+        }
+    }
+    
+    addResetButton(controller, paramName, defaultValue) {
+        // Create a reset button for individual parameters
+        const resetButton = document.createElement('button')
+        resetButton.className = 'param-reset-btn'
+        resetButton.innerHTML = '↻'
+        resetButton.title = `Reset ${paramName} to default (${defaultValue.toFixed(3)})`
+        resetButton.onclick = (e) => {
+            e.stopPropagation()
+            this.resetParameter(paramName, defaultValue)
+        }
+        
+        // Find the LFO container and add the reset button to it
+        const controllerElement = controller.domElement
+        if (controllerElement) {
+            // Look for the LFO container that should be added later
+            setTimeout(() => {
+                const lfoContainer = controllerElement.querySelector('.lfo-container')
+                if (lfoContainer) {
+                    const lfoHeader = lfoContainer.querySelector('.lfo-header')
+                    if (lfoHeader) {
+                        // Add reset button to the LFO header alongside LFO toggle and expand buttons
+                        lfoHeader.appendChild(resetButton)
+                    }
+                }
+            }, 150) // Slightly longer delay to ensure LFO container is created
+        }
+    }
     onMessage(event) {
         let {name, context} = event.data
         let key = `on${name}`
@@ -311,6 +352,9 @@ class Hud {
             controller.onChange(() => {
                 this.updateParameter(n, this.params[n])
             })
+            
+            // Add individual reset button for this parameter
+            this.addResetButton(controller, n, d)
         })
         
         // Add LFO panels after a short delay to ensure DOM is ready
