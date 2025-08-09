@@ -66,6 +66,12 @@ class Server {
             ['AudioLength', .1],
             ['AudioGain', .5],
         ])
+        // Add ColorTexture PROPS here to ensure consistent initialization
+        this.PROPS = this.PROPS.concat([
+            ['ColorXStart', .5],
+            ['ColorXLength', .75],
+            ['ColorYDrift', .5],
+        ])
         this.params = {}
 
     // --- NEW: bind + register the resize handler ---------------------------
@@ -161,7 +167,6 @@ class Server {
         gainNode.gain.setValueAtTime(1.5, audioContext.currentTime)
         this.audioTexture = new AudioTexture({gl, analyzer: audioAnalyzer})
         this.colorTexture = new ColorTexture({gl})
-        this.PROPS = this.PROPS.concat(this.colorTexture.PROPS)
         requestAnimationFrame(this.render.bind(this))
         
         this.PROPS.forEach(([n, d]) => {

@@ -147,6 +147,22 @@ class Hud {
         this.serverChannel.send('HudParameterChange', {key, value})
         // console.log({key, value})
     }
+    
+    resetToDefaults() {
+        // Reset all parameters to their default values
+        Object.keys(this.defaultValues).forEach(key => {
+            const defaultValue = this.defaultValues[key]
+            this.params[key] = defaultValue
+            this.serverChannel.send('HudParameterChange', {key, value: defaultValue})
+        })
+        
+        // Update all controller displays to reflect the reset values
+        this.gui.__controllers.forEach(controller => {
+            if (controller.property in this.defaultValues) {
+                controller.updateDisplay()
+            }
+        })
+    }
     onMessage(event) {
         let {name, context} = event.data
         let key = `on${name}`
@@ -165,6 +181,13 @@ class Hud {
         this.midiPropertyMapping = {}
         this.gui = new dat.GUI()
         this.gui.enableMidi() 
+        
+        // Store default values for reset functionality
+        this.defaultValues = {}
+        props.forEach(([name, defaultValue]) => {
+            this.defaultValues[name] = defaultValue
+        })
+        
         this.params = {
             'ReloadServer': () => {
                 this.serverChannel.send('HudRequestServerReload')
@@ -174,11 +197,15 @@ class Hud {
             },
             "RecordStop": () => {
                 this.serverChannel.send('HudRequestRecordStop')
+            },
+            "Reset": () => {
+                this.resetToDefaults()
             }
         }
         this.gui.add(this.params, 'ReloadServer')
         this.gui.add(this.params, 'RecordStart')
         this.gui.add(this.params, 'RecordStop')
+        this.gui.add(this.params, 'Reset')
         props.forEach(([n, d]) => {           
             this.params[n] = d
             let controller = this.gui.add(this.params, n, 0, 1, 1/128)
@@ -196,17 +223,28 @@ class Hud {
             let isFunction = typeof propertyValue == 'function'
             var gridKey = null
             if (isFunction) {
-                gridKey = this.midi.sortedButtonKeys[buttonCount]
+                // Only assign MIDI mapping if we have button keys available
+                if (buttonCount < this.midi.sortedButtonKeys.length) {
+                    gridKey = this.midi.sortedButtonKeys[buttonCount]
+                    controller.name(`${gridKey} - ${controller.property}`)
+                    this.midiPropertyMapping[gridKey] = {
+                        controller: controller,
+                        propertyName: controller.property,
+                    }
+                }
                 buttonCount++
             }
             else {
-                gridKey = this.midi.sortedSliderKeys[sliderCount]
+                // Only assign MIDI mapping if we have slider keys available
+                if (sliderCount < this.midi.sortedSliderKeys.length) {
+                    gridKey = this.midi.sortedSliderKeys[sliderCount]
+                    controller.name(`${gridKey} - ${controller.property}`)
+                    this.midiPropertyMapping[gridKey] = {
+                        controller: controller,
+                        propertyName: controller.property,
+                    }
+                }
                 sliderCount++
-            }
-            controller.name(`${gridKey} - ${controller.property}`)
-            this.midiPropertyMapping[gridKey] = {
-                controller: controller,
-                propertyName: controller.property,
             }
         }
     }
