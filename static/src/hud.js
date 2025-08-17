@@ -11,22 +11,21 @@ const MIDI_MAPPING_STR = '[["r1c1","s16"],\
 ["r1c6","s50"],\
 ["r1c7","s54"],\
 ["r1c8","s58"],\
-["r2c1","s55"],\
-["r2c2","s59"],\
-["r2c7","s48"],\
-["r2c3","s18"],\
-["r2c4","s22"],\
-["r2c5","s26"],\
-["r2c6","s30"],\
-["r2c8","s19"],\
-["r3c1","s23"],\
-["r3c2","s27"],\
-["r3c3","s31"],\
-["r3c4","s49"],\
-["r3c5","s53"],\
-["r3c6","s57"],\
-["r3c7","s61"]]'
-
+["r2c1","s17"],\
+["r2c2","s21"],\
+["r2c3","s25"],\
+["r2c4","s29"],\
+["r2c5","s47"],\
+["r2c6","s51"],\
+["r2c7","s59"],\
+["r2c8","s18"],\
+["r3c1","s22"],\
+["r3c2","s26"],\
+["r3c3","s30"],\
+["r3c4","s48"],\
+["r3c5","s52"],\
+["r3c6","s56"],\
+["r3c7","s60"]]'
 
 class MidiMapper {
     constructor(midiMappingString) {
@@ -320,7 +319,9 @@ class Hud {
         this.destroyLFOPanels()
         
         this.midiPropertyMapping = {}
-        this.gui = new dat.GUI()
+        this.gui = new dat.GUI({
+            width: 600  // Make the GUI panel wider (default is ~245px)
+        })
         this.gui.enableMidi() 
         
         // Store default values for reset functionality
