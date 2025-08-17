@@ -46,9 +46,17 @@ class MidiMapper {
         let midiAccess = await navigator.requestMIDIAccess()
         let midiInputs = []
         midiAccess.inputs.forEach((e) => midiInputs.push(e))
-        let midiInput = midiInputs[0]
-        if (midiInput) {
-            midiInput.onmidimessage  = this.onMidiMessage.bind(this)
+        
+        // Connect to ALL MIDI controllers, not just the first one
+        midiInputs.forEach((midiInput, index) => {
+            console.log(`Connecting to MIDI controller ${index + 1}: ${midiInput.name}`)
+            midiInput.onmidimessage = this.onMidiMessage.bind(this)
+        })
+        
+        if (midiInputs.length === 0) {
+            console.log('No MIDI controllers found')
+        } else {
+            console.log(`Connected to ${midiInputs.length} MIDI controller(s)`)
         }
     }
     onMidiMessage(midiMessage) {

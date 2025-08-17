@@ -31,29 +31,50 @@ def generate_self_signed_cert():
                  '-subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=localhost" '
                  '-addext "subjectAltName=DNS:localhost,IP:127.0.0.1"')
 
+import sys
+
+# Check if user wants HTTP or HTTPS
+use_https = "--https" in sys.argv or "-s" in sys.argv
+
 PORT = find_available_port(5000)
 handler = NoCacheHTTPRequestHandler
 
-# Generate certificate if it doesn't exist
-generate_self_signed_cert()
-
-# Create regular HTTP server
-httpd = socketserver.TCPServer(("", PORT), handler)
-
-# Create SSL context
-context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-context.load_cert_chain(certfile="localhost.crt", keyfile="localhost.key")
-
-# Wrap socket with SSL context
-httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+if use_https:
+    # Generate certificate if it doesn't exist
+    generate_self_signed_cert()
+    
+    # Create regular HTTP server
+    httpd = socketserver.TCPServer(("", PORT), handler)
+    
+    # Create SSL context
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.load_cert_chain(certfile="localhost.crt", keyfile="localhost.key")
+    
+    # Wrap socket with SSL context
+    httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
+    protocol = "https"
+else:
+    # Create plain HTTP server
+    httpd = socketserver.TCPServer(("", PORT), handler)
+    protocol = "http"
 
 # Get local IP address
-hostname = socket.gethostname()
-local_ip = socket.gethostbyname(hostname)
+try:
+    # Try to get the local IP by connecting to a remote address
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        # Connect to Google's DNS server (doesn't actually send data)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+except Exception:
+    # Fallback to localhost if we can't determine the local IP
+    local_ip = "127.0.0.1"
 
 print(f"Serving at:")
-print(f"Local: https://localhost:{PORT}?mode=server https://localhost:{PORT}?mode=hud")
-print(f"Network: https://{local_ip}:{PORT}?mode=server https://{local_ip}:{PORT}?mode=hud")
-print("Note: You will need to accept the self-signed certificate warning in your browser")
+print(f"Local: {protocol}://localhost:{PORT}?mode=server {protocol}://localhost:{PORT}?mode=hud")
+print(f"Network: {protocol}://{local_ip}:{PORT}?mode=server {protocol}://{local_ip}:{PORT}?mode=hud")
+if use_https:
+    print("Note: You will need to accept the self-signed certificate warning in your browser")
+else:
+    print("Running in HTTP mode (no SSL)")
 
 httpd.serve_forever() 
