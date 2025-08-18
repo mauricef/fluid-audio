@@ -1,6 +1,7 @@
 import { FluidApp } from "/static/src/shaders/fluid/fluid.js"
 import { JetEmitter } from "./jetEmitter.js"
 import { LineEmitter } from "./lineEmitter.js"
+import { TriangleEmitter } from "./triangleEmitter.js"
 import { BlackWhiteEmitter } from "./blackWhiteEmitter.js"
 
 
@@ -21,6 +22,11 @@ export class SoakApp {
             gl: this.gl, 
             canvas: this.canvas, 
             size: this.simSize, 
+        })
+        this.triangleEmitter = new TriangleEmitter({
+            gl: this.gl, 
+            canvas: this.canvas, 
+            size: this.simSize, 
         })   
         
         // Create combined output buffers for blending both emitters
@@ -35,16 +41,18 @@ export class SoakApp {
         
         this.PROPS = [
             ["JetCount", .1],
-            ["LineCount", .1]
+            ["LineCount", .1],
+            ["TriangleCount", .5]
         ]
         this.PROPS = this.PROPS.concat(this.jetEmitter.PROPS)
         this.PROPS = this.PROPS.concat(this.lineEmitter.PROPS)
+        this.PROPS = this.PROPS.concat(this.triangleEmitter.PROPS)
         this.PROPS = this.PROPS.concat(this.fluid.PROPS)
     }
     execute({timestamp, params, audioPowerTexture, colorTexture}) {
         let {fluidParams, gl} = this
         
-        // Execute both emitters
+        // Execute all three emitters
         this.jetEmitter.execute({
             params: params, 
             timestamp: timestamp,
@@ -53,6 +61,13 @@ export class SoakApp {
         })
         
         this.lineEmitter.execute({
+            params: params, 
+            timestamp: timestamp,
+            audioPowerTexture: audioPowerTexture,
+            colorTexture: colorTexture
+        })
+        
+        this.triangleEmitter.execute({
             params: params, 
             timestamp: timestamp,
             audioPowerTexture: audioPowerTexture,
@@ -108,6 +123,19 @@ export class SoakApp {
                 GlobalSpeedDecay: params.GlobalSpeedDecay,
                 colorUpdateBuffer: this.lineEmitter.colorBuffer,
                 velocityUpdateBuffer: this.lineEmitter.velocityBuffer
+            })
+        }
+        
+        // Add triangle emitter contribution
+        if (params.TriangleColorAlpha > 0 && params.TriangleCount > 0) {
+            this.fluid.execute({
+                dt: fluidParams.DT,
+                subSteps: 1, // Fewer substeps for the secondary contribution
+                pressureSteps: fluidParams.PRESSURE_STEPS,
+                GlobalAlphaDecay: params.GlobalAlphaDecay,
+                GlobalSpeedDecay: params.GlobalSpeedDecay,
+                colorUpdateBuffer: this.triangleEmitter.colorBuffer,
+                velocityUpdateBuffer: this.triangleEmitter.velocityBuffer
             })
         }
         
