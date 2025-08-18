@@ -1,86 +1,27 @@
 import { calculateAspectRatio } from "/static/src/ui/index.js"
 import { ShaderProgram } from "/static/src/glHelper.js";
 import { GridApp } from "/static/src/apps/gridApp.js";
-
-export class SplatShader {    
-    VS = /*glsl*/`
-        #version 300 es
-        in vec2 position;
-
-        uniform vec2 uAspectRatio;
-        uniform sampler2D uLocation;
-        uniform sampler2D uRadius;
-        uniform sampler2D uValue;
-        
-        out vec2 vXY;
-        out vec4 vValue;
-        out float vBlur; 
-
-        vec4 sampleInstance(sampler2D samp) {
-            return texelFetch(samp, ivec2(gl_InstanceID, 0), 0);
-        }
-        void main() {
-            float aScale = sampleInstance(uRadius).r;
-            vec2 aOffset = sampleInstance(uLocation).rg;
-            vValue = sampleInstance(uValue);
-            vXY = position;
-            vec2 pt = (position * aScale + aOffset) / uAspectRatio;
-            gl_Position = vec4(pt, 0., 1.);
-        }
-    `
-
-    FS = /*glsl*/`
-        #version 300 es
-        precision highp float;
-        in vec2 vXY;
-        in vec4 vValue;
-        in float vBlur;
-        uniform float uAlpha;
-        out vec4 FOut;
-
-        void main() {        
-            float weight = float(length(vXY) < 1.);
-            FOut = vValue * weight * uAlpha;
-        }
-    `
-
-    constructor({gl, aspectRatio, blend}) {
-        this.gl = gl
-        this.aspectRatio = aspectRatio
-        this.pg = new ShaderProgram({gl, vs:this.VS, fs:this.FS, blend: blend, clear: true})
-    }
-    render(inputBuffers, fbi, alpha, numInstances) {
-        this.pg.execute({
-            uAspectRatio: this.aspectRatio,
-            uRadius: inputBuffers.radiusTexture,
-            uLocation: inputBuffers.locationTexture,
-            uValue: inputBuffers.valueTexture,
-            uAlpha: alpha
-        }, fbi, {numInstances: numInstances})
-    }
-}
+import { SplatShader } from "./jetEmitter.js";
 
 const VELOCITY_MAGNITUDE_MAX = 1
 
-
+// Line location shader - positions emitters along a horizontal line
 const locationFS = /*glsl*/`
     #version 300 es
     precision highp float;
 
-    #define PI 3.1415927
     in vec2 uv;
-    uniform float radius;
-    uniform float uThetaOffset;
-    uniform float uSpiralLoops;
-    uniform float uSpiralInward;
+    uniform float uLineY;
+    uniform float uLineWidth;
+    uniform float uLineOffset;
     out vec4 location;
 
     void main() 
     {
-        float theta = 2. * PI * (uv.x * (1. + uSpiralLoops) + uThetaOffset);
-        float r = radius * (uSpiralInward + (1. - uSpiralInward) * uv.x);
-        vec2 pt = r * vec2(cos(theta), sin(theta));
-        location = vec4(pt, 0., 1.);
+        // Position along line from -lineWidth/2 to +lineWidth/2
+        float x = (uv.x - 0.5) * uLineWidth + uLineOffset;
+        float y = uLineY;
+        location = vec4(x, y, 0., 1.);
     }
 `
 
@@ -148,7 +89,7 @@ const velocityVectorFS = /*glsl*/`
     in vec2 uv;
     uniform sampler2D uAudioPowerTexture;
     uniform float uMagnitude;
-    uniform float uThetaOffset;
+    uniform float uDirection;
 
     out vec4 velocity;
 
@@ -156,30 +97,29 @@ const velocityVectorFS = /*glsl*/`
     {   
         float frequencyStrength = texture(uAudioPowerTexture, uv).r;
         float magnitude = .1 * uMagnitude * frequencyStrength;
-        float theta = 2. * PI * (uv.x + uThetaOffset);
+        
+        // Direction: 0 = up, 0.25 = right, 0.5 = down, 0.75 = left
+        float theta = 2. * PI * uDirection;
         vec2 vXY = magnitude * vec2(cos(theta), sin(theta));
         velocity = vec4(vXY, 0., 1.);
     }
 `
 
-const MAX_JET_COUNT = 256
+const MAX_LINE_COUNT = 256
 
-
-export class JetEmitter {
+export class LineEmitter {
     constructor({gl, canvas, size}) {
-
         this.gridApp = new GridApp({gl})
         
         this.PROPS = [
-            ['JetColorAlpha', 1.],
-            ['JetSourceSize', .5],
-            ['PerimeterRotate', .5],
-            ['PerimeterRadius', .5],
-            ['JetLength', .25],
-            ['JetSpeed', .5],
-            ['JetRotate', .5],
-            ['SpiralLoops', 0],
-            ['SpiralInward', 1]
+            ['LineColorAlpha', 1.],
+            ['LineSourceSize', .5],
+            ['LineY', 0.5],
+            ['LineWidth', 1.],
+            ['LineOffset', 0.],
+            ['LineLength', .25],
+            ['LineSpeed', .5],
+            ['LineDirection', 0.25] // 0=up, 0.25=right, 0.5=down, 0.75=left
         ]
         this.PROPS = this.PROPS.concat(this.gridApp.PROPS)
 
@@ -187,14 +127,10 @@ export class JetEmitter {
         this.gl = gl
         
         this.locationShader = new ShaderProgram({gl, fs: locationFS})
-
         this.colorRadiusShader = new ShaderProgram({gl, fs: colorRadiusFS})
-
         this.colorShader = new ShaderProgram({gl, fs: colorFS})
-        this.colorFbi = twgl.createFramebufferInfo(gl, [{}], MAX_JET_COUNT, 1)
-
+        this.colorFbi = twgl.createFramebufferInfo(gl, [{}], MAX_LINE_COUNT, 1)
         this.velocityRadiusShader = new ShaderProgram({gl, fs: velocityRadiusFS})
-
         this.velocityVectorShader = new ShaderProgram({gl, fs: velocityVectorFS})
 
         this.colorBuffer = twgl.createFramebufferInfo(gl, [{internalFormat: gl.RGBA16F}], size[0], size[1])
@@ -212,67 +148,67 @@ export class JetEmitter {
             aspectRatio, 
         })   
 
-        this.thetaOffset = 0
-        this.circleOffset = 0
+        this.lineOffset = 0
     }
-    ensureBuffers(jetCount) {
+    
+    ensureBuffers(lineCount) {
         let {gl} = this
-        if (this.lastCount != jetCount) {
-            this.locationFbi = twgl.createFramebufferInfo(gl, [{internalFormat: gl.RG32F}], jetCount, 1)
-            this.colorRadiusFbi = twgl.createFramebufferInfo(gl, [{internalFormat: gl.R32F}], jetCount, 1)
-            this.colorFbi = twgl.createFramebufferInfo(gl, [{}], jetCount, 1)
-            this.velocityRadiusFbi = twgl.createFramebufferInfo(gl, [{internalFormat: gl.R32F}], jetCount, 1)
-            this.velocityVectorFbi = twgl.createFramebufferInfo(gl, [{internalFormat: gl.RG32F}], jetCount, 1)
-            this.lastCount = jetCount
+        if (this.lastCount != lineCount) {
+            this.locationFbi = twgl.createFramebufferInfo(gl, [{internalFormat: gl.RG32F}], lineCount, 1)
+            this.colorRadiusFbi = twgl.createFramebufferInfo(gl, [{internalFormat: gl.R32F}], lineCount, 1)
+            this.colorFbi = twgl.createFramebufferInfo(gl, [{}], lineCount, 1)
+            this.velocityRadiusFbi = twgl.createFramebufferInfo(gl, [{internalFormat: gl.R32F}], lineCount, 1)
+            this.velocityVectorFbi = twgl.createFramebufferInfo(gl, [{internalFormat: gl.RG32F}], lineCount, 1)
+            this.lastCount = lineCount
         }
     }
+    
     execute({timestamp, params, audioPowerTexture, colorTexture}) {
-        let JET_COUNT = params.JetCount * MAX_JET_COUNT
-        this.ensureBuffers(JET_COUNT)
+        let LINE_COUNT = params.LineCount * MAX_LINE_COUNT
+        this.ensureBuffers(LINE_COUNT)
         let {gl} = this
-        let circleOffsetFreq = -1 * (2 * params.PerimeterRotate - 1)
-        circleOffsetFreq =  (Math.abs(circleOffsetFreq) < .1) ? 0 :circleOffsetFreq
-        this.circleOffset += circleOffsetFreq * .01
-        this.circleOffset = this.circleOffset - Math.floor(this.circleOffset) // Keep between 0 and 1
+
+        // Animate line offset if desired
+        let lineOffsetFreq = -1 * (2 * params.LineOffset - 1)
+        lineOffsetFreq = (Math.abs(lineOffsetFreq) < .1) ? 0 : lineOffsetFreq
+        this.lineOffset += lineOffsetFreq * .01
+        this.lineOffset = this.lineOffset - Math.floor(this.lineOffset) // Keep between 0 and 1
 
         this.locationShader.execute({
-            radius: params.PerimeterRadius,
-            uThetaOffset: this.circleOffset,
-            uSpiralLoops: 10 * params.SpiralLoops,
-            uSpiralInward: params.SpiralInward,
+            uLineY: (params.LineY - 0.5) * 2, // Convert from 0-1 to -1 to 1
+            uLineWidth: params.LineWidth * 2, // Full canvas width when = 1
+            uLineOffset: (this.lineOffset - 0.5) * 0.3, // Oscillate around center, keep bounded
         }, this.locationFbi)
 
         this.colorShader.execute({}, this.colorFbi)
 
-        let maxJetRadius = .5 * 2 * Math.PI * params.PerimeterRadius / JET_COUNT
+        let maxLineRadius = .5 * params.LineWidth / LINE_COUNT
         this.colorRadiusShader.execute({
-            uMax: maxJetRadius * params.JetSourceSize,
+            uMax: maxLineRadius * params.LineSourceSize,
             uAudioPowerTexture: audioPowerTexture
         }, this.colorRadiusFbi)
 
         this.velocityRadiusShader.execute({
-            uScale: params.JetLength,
+            uScale: params.LineLength,
             uRadiusTexture: this.colorRadiusFbi.attachments[0],
         }, this.velocityRadiusFbi)
 
-        let thetaOffsetFreq = -1 * (2 * params.JetRotate - 1)
-        thetaOffsetFreq =  (Math.abs(thetaOffsetFreq) < .1) ? 0 :thetaOffsetFreq
-        this.thetaOffset += (thetaOffsetFreq * .01) % 1.
         this.velocityVectorShader.execute({
-            uMagnitude: VELOCITY_MAGNITUDE_MAX * params.JetSpeed,
+            uMagnitude: VELOCITY_MAGNITUDE_MAX * params.LineSpeed,
             uAudioPowerTexture: audioPowerTexture,
-            uThetaOffset: this.thetaOffset
+            uDirection: params.LineDirection
         }, this.velocityVectorFbi)
        
         twgl.bindFramebufferInfo(this.gl, this.colorBuffer)
         this.gl.clear(gl.COLOR_BUFFER_BIT)
         twgl.bindFramebufferInfo(this.gl, null)
-        if (params.JetColorAlpha > 0) {
-            this.colorEmitter.render( {
+        
+        if (params.LineColorAlpha > 0) {
+            this.colorEmitter.render({
                 radiusTexture: this.colorRadiusFbi.attachments[0],
                 locationTexture: this.locationFbi.attachments[0],
-                valueTexture: colorTexture // this.colorFbi.attachments[0]
-            }, this.colorBuffer, params.JetColorAlpha, Math.ceil(JET_COUNT))
+                valueTexture: colorTexture
+            }, this.colorBuffer, params.LineColorAlpha, Math.ceil(LINE_COUNT))
         }
 
         if (params.BlockAlpha > 0) {
@@ -288,6 +224,6 @@ export class JetEmitter {
             radiusTexture: this.velocityRadiusFbi.attachments[0],
             locationTexture: this.locationFbi.attachments[0],
             valueTexture: this.velocityVectorFbi.attachments[0],
-        },this.velocityBuffer, 1., Math.ceil(JET_COUNT))
+        }, this.velocityBuffer, 1., Math.ceil(LINE_COUNT))
     }
 }
