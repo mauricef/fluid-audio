@@ -91,11 +91,13 @@ const colorRadiusFS = /*glsl*/`
     in vec2 uv;
     uniform sampler2D uAudioPowerTexture;
     uniform float uMax;
+    uniform float uMinLevel;
     out vec4 outRadius;
 
     void main() 
     {   
         float frequencyStrength = texture(uAudioPowerTexture, uv).r;
+        frequencyStrength = max(frequencyStrength, uMinLevel);
         float radius = uMax * frequencyStrength;
         outRadius = vec4(vec3(radius), 1.);
     }
@@ -149,12 +151,14 @@ const velocityVectorFS = /*glsl*/`
     uniform sampler2D uAudioPowerTexture;
     uniform float uMagnitude;
     uniform float uThetaOffset;
+    uniform float uMinLevel;
 
     out vec4 velocity;
 
     void main() 
     {   
         float frequencyStrength = texture(uAudioPowerTexture, uv).r;
+        frequencyStrength = max(frequencyStrength, uMinLevel);
         float magnitude = .1 * uMagnitude * frequencyStrength;
         float theta = 2. * PI * (uv.x + uThetaOffset);
         vec2 vXY = magnitude * vec2(cos(theta), sin(theta));
@@ -173,6 +177,7 @@ export class JetEmitter {
         this.PROPS = [
             ['JetColorAlpha', 1.],
             ['JetSourceSize', .5],
+            ['JetMinLevel', 0.],
             ['PerimeterRotate', .5],
             ['PerimeterRadius', .5],
             ['JetLength', .25],
@@ -247,7 +252,8 @@ export class JetEmitter {
         let maxJetRadius = .5 * 2 * Math.PI * params.PerimeterRadius / JET_COUNT
         this.colorRadiusShader.execute({
             uMax: maxJetRadius * params.JetSourceSize,
-            uAudioPowerTexture: audioPowerTexture
+            uAudioPowerTexture: audioPowerTexture,
+            uMinLevel: params.JetMinLevel
         }, this.colorRadiusFbi)
 
         this.velocityRadiusShader.execute({
@@ -261,7 +267,8 @@ export class JetEmitter {
         this.velocityVectorShader.execute({
             uMagnitude: VELOCITY_MAGNITUDE_MAX * params.JetSpeed,
             uAudioPowerTexture: audioPowerTexture,
-            uThetaOffset: this.thetaOffset
+            uThetaOffset: this.thetaOffset,
+            uMinLevel: params.JetMinLevel
         }, this.velocityVectorFbi)
        
         twgl.bindFramebufferInfo(this.gl, this.colorBuffer)

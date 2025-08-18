@@ -44,11 +44,13 @@ const colorRadiusFS = /*glsl*/`
     in vec2 uv;
     uniform sampler2D uAudioPowerTexture;
     uniform float uMax;
+    uniform float uMinLevel;
     out vec4 outRadius;
 
     void main() 
     {   
         float frequencyStrength = texture(uAudioPowerTexture, uv).r;
+        frequencyStrength = max(frequencyStrength, uMinLevel);
         float radius = uMax * frequencyStrength;
         outRadius = vec4(vec3(radius), 1.);
     }
@@ -105,12 +107,14 @@ const velocityVectorFS = /*glsl*/`
     uniform float uTriangleSize;
     uniform float uTriangleRotation;
     uniform vec2 uTriangleCenter;
+    uniform float uMinLevel;
 
     out vec4 velocity;
 
     void main() 
     {   
         float frequencyStrength = texture(uAudioPowerTexture, uv).r;
+        frequencyStrength = max(frequencyStrength, uMinLevel);
         float magnitude = .1 * uMagnitude * frequencyStrength;
         
         // Calculate position on triangle to determine outward normal
@@ -146,11 +150,12 @@ export class TriangleEmitter {
         this.gridApp = new GridApp({gl})
         
         this.PROPS = [
-            ['TriangleColorAlpha', 1.],
+            ['TriangleColorAlpha', 0],
             ['TriangleSourceSize', .5],
+            ['TriangleMinLevel', 0], // Keep some minimum level to make triangle visible by default
             ['TriangleSize', .5],
             ['TriangleRotation', 0.5], // Animation speed (0.5 = no rotation)
-            ['TriangleAngle', 0.], // Static rotation offset (0-1, where 0.33 ≈ base down)
+            ['TriangleAngle', 0.33], // Static rotation offset - triangle sits on base by default
             ['TriangleCenterX', 0.5],
             ['TriangleCenterY', 0.5],
             ['TriangleLength', .25],
@@ -229,7 +234,8 @@ export class TriangleEmitter {
         let maxTriangleRadius = .5 * params.TriangleSize / Math.sqrt(TRIANGLE_COUNT)
         this.colorRadiusShader.execute({
             uMax: maxTriangleRadius * params.TriangleSourceSize,
-            uAudioPowerTexture: audioPowerTexture
+            uAudioPowerTexture: audioPowerTexture,
+            uMinLevel: params.TriangleMinLevel
         }, this.colorRadiusFbi)
 
         this.velocityRadiusShader.execute({
@@ -244,6 +250,7 @@ export class TriangleEmitter {
             uTriangleSize: params.TriangleSize,
             uTriangleRotation: totalRotation,
             uTriangleCenter: triangleCenter,
+            uMinLevel: params.TriangleMinLevel
         }, this.velocityVectorFbi)
        
         twgl.bindFramebufferInfo(this.gl, this.colorBuffer)

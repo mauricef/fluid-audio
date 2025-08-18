@@ -32,11 +32,13 @@ const colorRadiusFS = /*glsl*/`
     in vec2 uv;
     uniform sampler2D uAudioPowerTexture;
     uniform float uMax;
+    uniform float uMinLevel;
     out vec4 outRadius;
 
     void main() 
     {   
         float frequencyStrength = texture(uAudioPowerTexture, uv).r;
+        frequencyStrength = max(frequencyStrength, uMinLevel);
         float radius = uMax * frequencyStrength;
         outRadius = vec4(vec3(radius), 1.);
     }
@@ -90,12 +92,14 @@ const velocityVectorFS = /*glsl*/`
     uniform sampler2D uAudioPowerTexture;
     uniform float uMagnitude;
     uniform float uDirection;
+    uniform float uMinLevel;
 
     out vec4 velocity;
 
     void main() 
     {   
         float frequencyStrength = texture(uAudioPowerTexture, uv).r;
+        frequencyStrength = max(frequencyStrength, uMinLevel);
         float magnitude = .1 * uMagnitude * frequencyStrength;
         
         // Direction: 0 = up, 0.25 = right, 0.5 = down, 0.75 = left
@@ -112,11 +116,12 @@ export class LineEmitter {
         this.gridApp = new GridApp({gl})
         
         this.PROPS = [
-            ['LineColorAlpha', 1.],
+            ['LineColorAlpha', 0],
             ['LineSourceSize', .5],
+            ['LineMinLevel', 0.],
             ['LineY', 0.5],
             ['LineWidth', 1.],
-            ['LineOffset', 0.],
+            ['LineOffset', 0.5], // 0.5 = no movement, <0.5 = left, >0.5 = right
             ['LineLength', .25],
             ['LineSpeed', .5],
             ['LineDirection', 0.25] // 0=up, 0.25=right, 0.5=down, 0.75=left
@@ -171,8 +176,15 @@ export class LineEmitter {
         // Animate line offset if desired
         let lineOffsetFreq = -1 * (2 * params.LineOffset - 1)
         lineOffsetFreq = (Math.abs(lineOffsetFreq) < .1) ? 0 : lineOffsetFreq
-        this.lineOffset += lineOffsetFreq * .01
-        this.lineOffset = this.lineOffset - Math.floor(this.lineOffset) // Keep between 0 and 1
+        
+        if (lineOffsetFreq === 0) {
+            // No animation - reset to center
+            this.lineOffset = 0.5
+        } else {
+            // Animate the offset
+            this.lineOffset += lineOffsetFreq * .01
+            this.lineOffset = this.lineOffset - Math.floor(this.lineOffset) // Keep between 0 and 1
+        }
 
         this.locationShader.execute({
             uLineY: (params.LineY - 0.5) * 2, // Convert from 0-1 to -1 to 1
@@ -185,7 +197,8 @@ export class LineEmitter {
         let maxLineRadius = .5 * params.LineWidth / LINE_COUNT
         this.colorRadiusShader.execute({
             uMax: maxLineRadius * params.LineSourceSize,
-            uAudioPowerTexture: audioPowerTexture
+            uAudioPowerTexture: audioPowerTexture,
+            uMinLevel: params.LineMinLevel
         }, this.colorRadiusFbi)
 
         this.velocityRadiusShader.execute({
@@ -196,7 +209,8 @@ export class LineEmitter {
         this.velocityVectorShader.execute({
             uMagnitude: VELOCITY_MAGNITUDE_MAX * params.LineSpeed,
             uAudioPowerTexture: audioPowerTexture,
-            uDirection: params.LineDirection
+            uDirection: params.LineDirection,
+            uMinLevel: params.LineMinLevel
         }, this.velocityVectorFbi)
        
         twgl.bindFramebufferInfo(this.gl, this.colorBuffer)
