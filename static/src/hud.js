@@ -25,13 +25,18 @@ const MIDI_MAPPING_STR = '[["r1c1","s16"],\
 ["r3c4","s48"],\
 ["r3c5","s52"],\
 ["r3c6","s56"],\
-["r3c7","s60"]]'
+["r3c7","s60"],\
+["bankLeft","b25"],\
+["bankRight","b26"]]'
 
 class MidiMapper {
     constructor(midiMappingString) {
         this.midiMap = {}
         this.midiMapReverse = {}
         this.midiIsDown = {}
+        this.currentBank = 1
+        this.maxBanks = 3 // Will be calculated based on parameter count
+        
         let rawMidiMappings = JSON.parse(midiMappingString)
         rawMidiMappings.forEach(([grid, midi]) => {
             this.midiMap[midi] = grid
@@ -40,6 +45,10 @@ class MidiMapper {
         this.sortedKeys = Object.values(this.midiMap).sort()
         this.sortedSliderKeys = this.sortedKeys.filter(k => this.midiMapReverse[k][0] == 's')
         this.sortedButtonKeys = this.sortedKeys.filter(k => this.midiMapReverse[k][0] == 'b')
+        
+        // Remove bank buttons from regular control lists
+        this.sortedSliderKeys = this.sortedSliderKeys.filter(k => !['bankLeft', 'bankRight'].includes(k))
+        this.sortedButtonKeys = this.sortedButtonKeys.filter(k => !['bankLeft', 'bankRight'].includes(k))
     }
     async load() {
         let midiAccess = await navigator.requestMIDIAccess()
@@ -63,6 +72,17 @@ class MidiMapper {
         let controlType = messageType == 176 ? 's' : 'b'
         let midiKey = `${controlType}${channel}`
         let gridKey = this.midiMap[midiKey]
+        
+        // Handle bank switching
+        if (gridKey === 'bankLeft' && messageType == 144 && value > 0) {
+            this.switchBank(-1)
+            return
+        }
+        if (gridKey === 'bankRight' && messageType == 144 && value > 0) {
+            this.switchBank(1)
+            return
+        }
+        
         if (messageType == 144) {
             if (!this.midiIsDown[gridKey]) {
                 this.midiIsDown[gridKey] = true
@@ -77,6 +97,19 @@ class MidiMapper {
         }
         else if (messageType == 176) {
             this.onMidiValueChanged(gridKey, value)
+        }
+    }
+    
+    switchBank(direction) {
+        this.currentBank += direction
+        if (this.currentBank < 1) this.currentBank = this.maxBanks
+        if (this.currentBank > this.maxBanks) this.currentBank = 1
+        
+        console.log(`Switched to MIDI Bank ${this.currentBank}`)
+        
+        // Notify the HUD about bank change
+        if (this.onBankChanged) {
+            this.onBankChanged(this.currentBank)
         }
     }
 }
@@ -100,7 +133,12 @@ class Hud {
         this.midi.onMidiButtonDown = this.onMidiButtonDown.bind(this)
         this.midi.onMidiButtonUp = this.onMidiButtonUp.bind(this)
         this.midi.onMidiValueChanged = this.onMidiValueChanged.bind(this)
+        this.midi.onBankChanged = this.onBankChanged.bind(this)
         this.midi.load()
+        
+        // Initialize parameter banks
+        this.parameterBanks = []
+        this.currentBankIndicator = null
         
         // Initialize LFO system
         this.lfoManager = new LFOManager()
@@ -113,7 +151,7 @@ class Hud {
     }
 
     onMidiButtonDown(gridKey) {
-        let controllerMapping = this.midiPropertyMapping[gridKey];
+        let controllerMapping = this.getMidiPropertyMapping(gridKey);
         if (controllerMapping && typeof this.params[controllerMapping.propertyName] === 'function') {
             this.params[controllerMapping.propertyName]();
             this.applyMidiHighlight(gridKey); // Apply highlight
@@ -126,7 +164,7 @@ class Hud {
     }
 
     onMidiValueChanged(gridKey, value) {
-        let controllerMapping = this.midiPropertyMapping[gridKey];
+        let controllerMapping = this.getMidiPropertyMapping(gridKey);
         if (controllerMapping) {
             this.updateParameter(controllerMapping.propertyName, value / 128);
             if (controllerMapping.controller && typeof controllerMapping.controller.updateDisplay === 'function') {
@@ -135,13 +173,31 @@ class Hud {
             this.applyMidiHighlight(gridKey); // Apply highlight
         }
     }
+    
+    onBankChanged(bankNumber) {
+        console.log(`Bank changed to ${bankNumber}`)
+        this.updateBankIndicator(bankNumber)
+        this.updateMidiPropertyMapping()
+    }
+    
+    getMidiPropertyMapping(gridKey) {
+        if (!this.parameterBanks.length) return this.midiPropertyMapping[gridKey]
+        
+        const currentBank = this.midi.currentBank - 1 // Convert to 0-based index
+        if (currentBank >= 0 && currentBank < this.parameterBanks.length) {
+            const bankMapping = this.parameterBanks[currentBank]
+            return bankMapping[gridKey] || this.midiPropertyMapping[gridKey]
+        }
+        return this.midiPropertyMapping[gridKey]
+    }
 
     applyMidiHighlight(gridKey) {
-        if (!this.midiPropertyMapping || !this.midiPropertyMapping[gridKey]) {
+        const controllerMapping = this.getMidiPropertyMapping(gridKey);
+        if (!controllerMapping) {
             return;
         }
 
-        const controller = this.midiPropertyMapping[gridKey].controller;
+        const controller = controllerMapping.controller;
         if (controller && controller.domElement) {
             const domElement = controller.domElement;
 
@@ -373,6 +429,19 @@ class Hud {
             })
         }, 100)
 
+        // Create parameter banks for MIDI mapping
+        this.createParameterBanks(props)
+        
+        // Add MIDI Bank indicator
+        this.params['MIDI Bank'] = this.midi.currentBank
+        let bankController = this.gui.add(this.params, 'MIDI Bank', 1, this.midi.maxBanks, 1)
+        bankController.onChange(() => {
+            this.midi.currentBank = this.params['MIDI Bank']
+            this.updateMidiPropertyMapping()
+            console.log(`Manually switched to MIDI Bank ${this.midi.currentBank}`)
+        })
+        this.currentBankIndicator = bankController
+
         var sliderCount = 0
         var buttonCount = 0
         for (let i = 0; i < this.gui.__controllers.length; i++) {
@@ -394,6 +463,9 @@ class Hud {
                 buttonCount++
             }
             else {
+                // Skip the MIDI Bank parameter for regular MIDI mapping
+                if (propertyName === 'MIDI Bank') continue
+                
                 // Only assign MIDI mapping if we have slider keys available
                 if (sliderCount < this.midi.sortedSliderKeys.length) {
                     gridKey = this.midi.sortedSliderKeys[sliderCount]
@@ -406,6 +478,9 @@ class Hud {
                 sliderCount++
             }
         }
+        
+        // Initialize the banking system
+        this.updateMidiPropertyMapping()
     }
 
     onServerRenderBegin() {
@@ -414,6 +489,76 @@ class Hud {
 
     onServerRenderEnd() {
         this.stats.end()
+    }
+    
+    createParameterBanks(props) {
+        // Filter out function parameters (buttons) - these don't go in banks
+        const sliderParams = props.filter(([name, value]) => typeof this.params[name] !== 'function')
+        const availableSliders = this.midi.sortedSliderKeys.length
+        
+        // Calculate number of banks needed
+        const totalParams = sliderParams.length
+        const banksNeeded = Math.ceil(totalParams / availableSliders)
+        this.midi.maxBanks = Math.max(banksNeeded, 1)
+        
+        console.log(`Creating ${banksNeeded} banks for ${totalParams} parameters with ${availableSliders} available sliders`)
+        
+        // Create parameter banks
+        this.parameterBanks = []
+        for (let bank = 0; bank < banksNeeded; bank++) {
+            const bankMapping = {}
+            const startIndex = bank * availableSliders
+            const endIndex = Math.min(startIndex + availableSliders, totalParams)
+            
+            for (let i = startIndex; i < endIndex; i++) {
+                const paramIndex = i - startIndex
+                if (paramIndex < this.midi.sortedSliderKeys.length) {
+                    const gridKey = this.midi.sortedSliderKeys[paramIndex]
+                    const [paramName, defaultValue] = sliderParams[i]
+                    
+                    // Find the controller for this parameter
+                    const controller = this.gui.__controllers.find(c => c.property === paramName)
+                    if (controller) {
+                        bankMapping[gridKey] = {
+                            controller: controller,
+                            propertyName: paramName,
+                        }
+                    }
+                }
+            }
+            this.parameterBanks.push(bankMapping)
+            
+            console.log(`Bank ${bank + 1}:`, Object.keys(bankMapping).map(key => 
+                `${key}->${bankMapping[key].propertyName}`).join(', '))
+        }
+    }
+    
+    updateMidiPropertyMapping() {
+        if (!this.parameterBanks.length) return
+        
+        const currentBank = this.midi.currentBank - 1 // Convert to 0-based index
+        if (currentBank >= 0 && currentBank < this.parameterBanks.length) {
+            // Update controller names to reflect current bank
+            this.midi.sortedSliderKeys.forEach(gridKey => {
+                const currentMapping = this.parameterBanks[currentBank][gridKey]
+                const originalMapping = this.midiPropertyMapping[gridKey]
+                
+                if (currentMapping && currentMapping.controller) {
+                    // Update the controller name to show current bank assignment
+                    currentMapping.controller.name(`${gridKey} - ${currentMapping.propertyName} (Bank ${this.midi.currentBank})`)
+                } else if (originalMapping && originalMapping.controller) {
+                    // Show original mapping if no bank assignment
+                    originalMapping.controller.name(`${gridKey} - ${originalMapping.propertyName}`)
+                }
+            })
+        }
+    }
+    
+    updateBankIndicator(bankNumber) {
+        if (this.currentBankIndicator) {
+            this.params['MIDI Bank'] = bankNumber
+            this.currentBankIndicator.updateDisplay()
+        }
     }
 }
 
