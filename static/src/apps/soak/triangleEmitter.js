@@ -14,21 +14,46 @@ const locationFS = /*glsl*/`
     uniform float uTriangleSize;
     uniform float uTriangleRotation;
     uniform vec2 uTriangleCenter;
+    uniform float uTriangleShape; // 0.5=equilateral, <0.5=pointy, >0.5=flat
     out vec4 location;
 
     void main() 
     {
-        // Create triangle with vertices at 120 degree intervals
+        // Create isosceles triangle
         float t = uv.x * 3.0; // Map to 3 sides of triangle
         int side = int(floor(t));
         float s = fract(t); // Position along current side (0-1)
         
-        // Triangle vertices (equilateral triangle)
-        float angle1 = uTriangleRotation + float(side) * 2.094395; // 120 degrees in radians
-        float angle2 = uTriangleRotation + float(side + 1) * 2.094395;
+        // Calculate triangle height based on shape parameter
+        // shape=0.5 gives equilateral (height = size * sqrt(3)/2)
+        // shape<0.5 makes it pointier (taller), shape>0.5 makes it flatter (shorter)
+        float heightRatio = mix(2.0, 0.3, uTriangleShape); // Range from very tall to very flat
+        float triangleHeight = uTriangleSize * heightRatio;
+        float baseHalfWidth = uTriangleSize;
         
-        vec2 vertex1 = uTriangleSize * vec2(cos(angle1), sin(angle1));
-        vec2 vertex2 = uTriangleSize * vec2(cos(angle2), sin(angle2));
+        vec2 vertex1, vertex2;
+        
+        if (side == 0) {
+            // Bottom edge (base)
+            vertex1 = vec2(-baseHalfWidth, -triangleHeight * 0.33);
+            vertex2 = vec2(baseHalfWidth, -triangleHeight * 0.33);
+        } else if (side == 1) {
+            // Right edge
+            vertex1 = vec2(baseHalfWidth, -triangleHeight * 0.33);
+            vertex2 = vec2(0.0, triangleHeight * 0.67);
+        } else {
+            // Left edge
+            vertex1 = vec2(0.0, triangleHeight * 0.67);
+            vertex2 = vec2(-baseHalfWidth, -triangleHeight * 0.33);
+        }
+        
+        // Apply rotation
+        float cosR = cos(uTriangleRotation);
+        float sinR = sin(uTriangleRotation);
+        mat2 rotation = mat2(cosR, -sinR, sinR, cosR);
+        
+        vertex1 = rotation * vertex1;
+        vertex2 = rotation * vertex2;
         
         // Interpolate along the edge
         vec2 pt = mix(vertex1, vertex2, s) + uTriangleCenter;
@@ -107,6 +132,7 @@ const velocityVectorFS = /*glsl*/`
     uniform float uTriangleSize;
     uniform float uTriangleRotation;
     uniform vec2 uTriangleCenter;
+    uniform float uTriangleShape; // 0.5=equilateral, <0.5=pointy, >0.5=flat
     uniform float uMinLevel;
 
     out vec4 velocity;
@@ -122,11 +148,34 @@ const velocityVectorFS = /*glsl*/`
         int side = int(floor(t));
         float s = fract(t);
         
-        float angle1 = uTriangleRotation + float(side) * 2.094395;
-        float angle2 = uTriangleRotation + float(side + 1) * 2.094395;
+        // Calculate triangle height based on shape parameter
+        float heightRatio = mix(2.0, 0.3, uTriangleShape);
+        float triangleHeight = uTriangleSize * heightRatio;
+        float baseHalfWidth = uTriangleSize;
         
-        vec2 vertex1 = uTriangleSize * vec2(cos(angle1), sin(angle1));
-        vec2 vertex2 = uTriangleSize * vec2(cos(angle2), sin(angle2));
+        vec2 vertex1, vertex2;
+        
+        if (side == 0) {
+            // Bottom edge (base)
+            vertex1 = vec2(-baseHalfWidth, -triangleHeight * 0.33);
+            vertex2 = vec2(baseHalfWidth, -triangleHeight * 0.33);
+        } else if (side == 1) {
+            // Right edge
+            vertex1 = vec2(baseHalfWidth, -triangleHeight * 0.33);
+            vertex2 = vec2(0.0, triangleHeight * 0.67);
+        } else {
+            // Left edge
+            vertex1 = vec2(0.0, triangleHeight * 0.67);
+            vertex2 = vec2(-baseHalfWidth, -triangleHeight * 0.33);
+        }
+        
+        // Apply rotation
+        float cosR = cos(uTriangleRotation);
+        float sinR = sin(uTriangleRotation);
+        mat2 rotation = mat2(cosR, -sinR, sinR, cosR);
+        
+        vertex1 = rotation * vertex1;
+        vertex2 = rotation * vertex2;
         
         // Edge direction
         vec2 edge = normalize(vertex2 - vertex1);
@@ -155,12 +204,13 @@ export class TriangleEmitter {
             ['TriangleMinLevel', 0], // Keep some minimum level to make triangle visible by default
             ['TriangleSize', .5],
             ['TriangleRotation', 0.5], // Animation speed (0.5 = no rotation)
-            ['TriangleAngle', 0.33], // Static rotation offset - triangle sits on base by default
+            ['TriangleAngle', 0.0], // Static rotation offset - triangle sits on base by default
             ['TriangleCenterX', 0.5],
             ['TriangleCenterY', 0.5],
             ['TriangleLength', .25],
             ['TriangleSpeed', .5],
-            ['TriangleDirection', 0.] // 0=outward normal, 0.25=right, 0.5=inward, 0.75=left
+            ['TriangleDirection', 0.], // 0=outward normal, 0.25=right, 0.5=inward, 0.75=left
+            ['TriangleShape', 0.17966] // 0.5=equilateral, <0.5=pointy, >0.5=flat
         ]
         this.PROPS = this.PROPS.concat(this.gridApp.PROPS)
 
@@ -227,6 +277,7 @@ export class TriangleEmitter {
             uTriangleSize: params.TriangleSize,
             uTriangleRotation: totalRotation,
             uTriangleCenter: triangleCenter,
+            uTriangleShape: params.TriangleShape,
         }, this.locationFbi)
 
         this.colorShader.execute({}, this.colorFbi)
@@ -250,6 +301,7 @@ export class TriangleEmitter {
             uTriangleSize: params.TriangleSize,
             uTriangleRotation: totalRotation,
             uTriangleCenter: triangleCenter,
+            uTriangleShape: params.TriangleShape,
             uMinLevel: params.TriangleMinLevel
         }, this.velocityVectorFbi)
        
