@@ -3,41 +3,43 @@ import { SendChannel, RecieveChannel } from "./channel.js"
 import { LFOManager } from "./lfo.js"
 import { LFOPanel } from "./ui/lfoPanel.js"
 
-const MIDI_MAPPING_STR = '[["r1c1","s16"],\
-["r1c2","s20"],\
-["r1c3","s24"],\
-["r1c4","s28"],\
-["r1c5","s46"],\
-["r1c6","s50"],\
-["r1c7","s54"],\
-["r1c8","s58"],\
-["r2c1","s17"],\
-["r2c2","s21"],\
-["r2c3","s25"],\
-["r2c4","s29"],\
-["r2c5","s47"],\
-["r2c6","s51"],\
-["r2c7","s59"],\
-["r2c8","s18"],\
-["r3c1","s22"],\
-["r3c2","s26"],\
-["r3c3","s30"],\
-["r3c4","s48"],\
-["r3c5","s52"],\
-["r3c6","s56"],\
-["r3c7","s60"],\
-["bankLeft","b25"],\
-["bankRight","b26"]]'
+const MIDI_MAPPING = [
+["r1c1","s16"],
+["r1c2","s20"],
+["r1c3","s24"],
+["r1c4","s28"],
+["r1c5","s46"],
+["r1c6","s50"],
+["r1c7","s54"],
+["r1c8","s58"],
+["r2c1","s17"],
+["r2c2","s21"],
+["r2c3","s25"],
+["r2c4","s29"],
+["r2c5","s47"],
+["r2c6","s51"],
+["r2c7","s55"],
+["r2c8","s59"],
+["r3c1","s18"],
+["r3c2","s22"],
+["r3c3","s26"],
+["r3c4","s30"],
+["r3c5","s48"],
+["r3c6","s52"],
+["r3c7","s56"],
+["r3c8","s60"],
+["bankLeft","b25"],
+["bankRight","b26"]
+]
 
 class MidiMapper {
-    constructor(midiMappingString) {
+    constructor(rawMidiMappings) {
         this.midiMap = {}
         this.midiMapReverse = {}
         this.midiIsDown = {}
         this.currentBank = 1
         this.maxBanks = 3 // Will be calculated based on parameter count
-        
-        let rawMidiMappings = JSON.parse(midiMappingString)
+
         rawMidiMappings.forEach(([grid, midi]) => {
             this.midiMap[midi] = grid
             this.midiMapReverse[grid] = midi
@@ -129,7 +131,7 @@ class Hud {
         this.hudChannel = new RecieveChannel('Hud', this)
         this.serverChannel = new SendChannel('Server')
         this.serverChannel.send('HudRequestProps')
-        this.midi = new MidiMapper(MIDI_MAPPING_STR)
+        this.midi = new MidiMapper(MIDI_MAPPING)
         this.midi.onMidiButtonDown = this.onMidiButtonDown.bind(this)
         this.midi.onMidiButtonUp = this.onMidiButtonUp.bind(this)
         this.midi.onMidiValueChanged = this.onMidiValueChanged.bind(this)

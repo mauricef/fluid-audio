@@ -25,9 +25,9 @@ function downloadBlob(filename, blob) {
 
 const FLUID_PARAMS = {
     DT: 1/60,
-    SIM_SCALE: 1,
-    SUBSTEPS: 1,
-    PRESSURE_STEPS: 10
+    SIM_SCALE: 2,
+    SUBSTEPS: 4,
+    PRESSURE_STEPS: 16
 }
 
 // const FLUID_PARAMS = {
@@ -161,7 +161,7 @@ class Server {
         const gainNode = audioContext.createGain()
         const audioAnalyzer = new AnalyserNode(audioContext, {
             smoothingTimeConstant: .75,
-            fftSize: 2**11,    
+            fftSize: 2**10,    
         })
         this.audioSource.connect(gainNode).connect(audioAnalyzer)
         gainNode.gain.setValueAtTime(1.5, audioContext.currentTime)

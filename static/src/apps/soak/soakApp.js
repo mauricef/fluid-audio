@@ -107,7 +107,7 @@ export class SoakApp {
             dt: fluidParams.DT,
             subSteps: fluidParams.SUBSTEPS,
             pressureSteps: fluidParams.PRESSURE_STEPS,
-            GlobalAlphaDecay: params.GlobalAlphaDecay,
+            GlobalAlphaDecay: params.GlobalAlphaDecay * 4,
             GlobalSpeedDecay: params.GlobalSpeedDecay,
             colorUpdateBuffer: this.jetEmitter.colorBuffer, // Primary emitter
             velocityUpdateBuffer: this.jetEmitter.velocityBuffer
