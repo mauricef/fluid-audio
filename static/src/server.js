@@ -185,11 +185,33 @@ export async function run() {
     var running = false
     const canvas = document.querySelector('canvas')
     let server = new Server(canvas)
-    //server.run()
-    canvas.onclick = () => {
+
+    // Create Start button
+    const startButton = document.createElement('button')
+    startButton.textContent = 'Start'
+    startButton.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 30px 60px;
+        font-size: 32px;
+        font-weight: bold;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 15px;
+        cursor: pointer;
+        z-index: 1000;
+    `
+    startButton.onmouseover = () => startButton.style.backgroundColor = '#45a049'
+    startButton.onmouseout = () => startButton.style.backgroundColor = '#4CAF50'
+    startButton.onclick = () => {
         if (!running) {
             server.run()
             running = true
+            startButton.remove()
         }
     }
+    document.body.appendChild(startButton)
 }

@@ -59,7 +59,10 @@ class Hud {
         this.stats = Stats()
         this.stats.showPanel(0)
         document.body.appendChild(this.stats.dom)
-        
+
+        // Add launch server button
+        this.createLaunchButton()
+
         this.canvas = canvas
         this.hudChannel = new RecieveChannel('Hud', this)
         this.serverChannel = new SendChannel('Server')
@@ -69,6 +72,32 @@ class Hud {
         this.midi.onMidiButtonUp = this.onMidiButtonUp.bind(this)
         this.midi.onMidiValueChanged = this.onMidiValueChanged.bind(this)
         this.midi.load()
+    }
+    createLaunchButton() {
+        const button = document.createElement('button')
+        button.textContent = 'Launch Server'
+        button.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            z-index: 1000;
+        `
+        button.onmouseover = () => button.style.backgroundColor = '#45a049'
+        button.onmouseout = () => button.style.backgroundColor = '#4CAF50'
+        button.onclick = () => {
+            window.open(window.location.origin + window.location.pathname + '?mode=server', '_blank')
+        }
+        document.body.appendChild(button)
+        this.launchButton = button
     }
     onMidiButtonDown(gridKey) {
         console.log(['onMidiButtonDown', gridKey])
@@ -104,6 +133,11 @@ class Hud {
         }
     }
     async onServerSendProps({props}) {
+        // Hide launch button when server is running
+        if (this.launchButton) {
+            this.launchButton.remove()
+            this.launchButton = null
+        }
         if (this.gui) {
             this.gui.destroy()
             this.gui = null
