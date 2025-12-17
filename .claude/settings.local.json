@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(gh auth switch:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)"
-    ]
-  }
-}
