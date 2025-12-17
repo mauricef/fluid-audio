@@ -1,4 +1,4 @@
-import { calculateAspectRatio } from "/static/src/ui/index.js"
+import { calculateAspectRatio } from "./ui/index.js"
 
 export class ShaderProgram {
     VS = /*glsl*/`

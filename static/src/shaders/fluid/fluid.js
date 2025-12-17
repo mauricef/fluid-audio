@@ -1,4 +1,4 @@
-import { calculateAspectRatio } from "/static/src/ui/index.js"
+import { calculateAspectRatio } from "../../ui/index.js"
 import { Pointer } from "./mouse.js"
 import { GLHelper } from "./gl.js"
 import { ShaderProgram } from "../../glHelper.js"

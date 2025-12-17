@@ -1,4 +1,4 @@
-import { ShaderProgram } from "/static/src/glHelper.js";
+import { ShaderProgram } from "../glHelper.js";
 
 
 const vs = /*glsl*/`

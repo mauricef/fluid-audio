@@ -1,6 +1,6 @@
-import { calculateAspectRatio } from "/static/src/ui/index.js"
-import { ShaderProgram } from "/static/src/glHelper.js";
-import { GridApp } from "/static/src/apps/gridApp.js";
+import { calculateAspectRatio } from "../../ui/index.js"
+import { ShaderProgram } from "../../glHelper.js";
+import { GridApp } from "../gridApp.js";
 import { SplatShader } from "./jetEmitter.js";
 
 const VELOCITY_MAGNITUDE_MAX = 1

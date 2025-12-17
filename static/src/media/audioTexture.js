@@ -1,5 +1,5 @@
 import { toLogScale01, dbToPower, powerToDb, fromLogScale01} from "../math.js"
-import { ShaderProgram } from "/static/src/glHelper.js";
+import { ShaderProgram } from "../glHelper.js";
 
 const FS = /*glsl*/`
     #version 300 es

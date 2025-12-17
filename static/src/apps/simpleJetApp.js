@@ -1,6 +1,6 @@
 
-import { FluidApp } from "/static/src/shaders/fluid/fluid.js"
-import { SimpleEmitterKernel } from "/static/src/emitters/simpleEmitter.js"
+import { FluidApp } from "../shaders/fluid/fluid.js"
+import { SimpleEmitterKernel } from "../emitters/simpleEmitter.js"
 
 
 export class SimpleJetApp {
