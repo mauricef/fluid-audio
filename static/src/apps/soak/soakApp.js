@@ -38,8 +38,8 @@ export class SoakApp {
             dt: fluidParams.DT,
             subSteps: fluidParams.SUBSTEPS,
             pressureSteps: fluidParams.PRESSURE_STEPS,
-            colorDecay: params.colorDecay,
-            velocityDecay: params.velocityDecay,
+            colorDecay: params.colorDecay * 5,
+            velocityDecay: params.velocityDecay * 5,
             colorUpdateBuffer: this.emitter.colorBuffer,
             velocityUpdateBuffer: this.emitter.velocityBuffer
         })
