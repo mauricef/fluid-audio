@@ -1,5 +1,5 @@
-import { calculateAspectRatio } from "/static/src/ui/index.js"
-import { ShaderProgram } from "/static/src/glHelper.js";
+import { calculateAspectRatio } from "../ui/index.js"
+import { ShaderProgram } from "../glHelper.js";
 
 const ColorFS = /*glsl*/`
     #version 300 es

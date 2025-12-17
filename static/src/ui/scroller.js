@@ -1,5 +1,5 @@
 import { MouseInput } from "./mouse.js"
-import { ShaderProgram } from "/static/src/glHelper.js"
+import { ShaderProgram } from "../glHelper.js"
 
 export class GLScroller {
     vs = /*glsl*/`

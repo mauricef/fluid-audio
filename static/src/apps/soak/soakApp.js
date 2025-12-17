@@ -1,4 +1,4 @@
-import { FluidApp } from "/static/src/shaders/fluid/fluid.js"
+import { FluidApp } from "../../shaders/fluid/fluid.js"
 import { JetEmitter } from "./jetEmitter.js"
 import { BlackWhiteEmitter } from "./blackWhiteEmitter.js"
 

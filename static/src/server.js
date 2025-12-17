@@ -101,13 +101,22 @@ class Server {
     async run() {
         let {gl, canvas} = this
         const audioContext = new AudioContext()
-        
+        console.log('AudioContext state:', audioContext.state)
+        console.log('AudioContext sampleRate:', audioContext.sampleRate)
+
+        // Resume AudioContext if suspended (browsers require user interaction)
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume()
+            console.log('AudioContext resumed, new state:', audioContext.state)
+        }
+
         try {
             // First request permission explicitly
             await navigator.mediaDevices.getUserMedia({ audio: true });
-            
+
             this.audioSource = await loadAudioDeviceSource({
                 context: audioContext,
+                deviceId: 'default',
             });
         } catch (error) {
             console.error('Microphone access denied or not available:', error);
@@ -146,6 +155,17 @@ class Server {
 
         let audioBuffer = this.audioTexture.textureBuffer
         let isFinite = audioBuffer.every(Number.isFinite)
+
+        // Audio debug logging
+        if (audioBuffer.length > 0) {
+            const min = Math.min(...audioBuffer)
+            const max = Math.max(...audioBuffer)
+            const sum = audioBuffer.reduce((a, b) => a + b, 0)
+            const mean = sum / audioBuffer.length
+            const sqDiffs = audioBuffer.map(v => (v - mean) ** 2)
+            const std = Math.sqrt(sqDiffs.reduce((a, b) => a + b, 0) / audioBuffer.length)
+            console.log(`Audio: min=${min.toFixed(4)} max=${max.toFixed(4)} mean=${mean.toFixed(4)} std=${std.toFixed(4)} len=${audioBuffer.length}`)
+        }
         if (isFinite) {    
             this.app.execute({
                 timestamp: timestamp,

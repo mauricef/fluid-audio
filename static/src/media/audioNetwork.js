@@ -1,11 +1,28 @@
 import { AudioFile } from "./audioFile.js"
 
 export async function loadAudioDeviceSource({deviceId, context}) {
-    let constraint = { audio: true}
+    let constraint = { audio: true }
     if (deviceId != null) {
-        constraint[audio] = {deviceId: { exact: deviceId}}
+        constraint.audio = { deviceId: deviceId }
     }
     const audioInputStream = await navigator.mediaDevices.getUserMedia(constraint)
+
+    // Log selected device info
+    const audioTrack = audioInputStream.getAudioTracks()[0]
+    if (audioTrack) {
+        const settings = audioTrack.getSettings()
+        console.log('Audio track label:', audioTrack.label)
+        console.log('Audio track settings:', settings)
+        console.log('Audio track enabled:', audioTrack.enabled)
+        console.log('Audio track muted:', audioTrack.muted)
+        console.log('Audio track readyState:', audioTrack.readyState)
+    }
+
+    // List all available audio devices
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const audioInputs = devices.filter(d => d.kind === 'audioinput')
+    console.log('Available audio inputs:', audioInputs.map(d => `${d.label} (${d.deviceId.slice(0,8)}...)`))
+
     return context.createMediaStreamSource(audioInputStream)
 }
 

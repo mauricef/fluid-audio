@@ -1,4 +1,4 @@
-import { ShaderProgram } from "/static/src/glHelper.js";
+import { ShaderProgram } from "../glHelper.js";
 
 const FS = /*glsl*/`
     #version 300 es
@@ -26,7 +26,7 @@ export class ColorTexture {
         ]
         this.gl = gl
         this.pg = new ShaderProgram({gl, fs:FS})
-        this.baseTexture = twgl.createTexture(gl, {src: '/static/images/color.jpg'})
+        this.baseTexture = twgl.createTexture(gl, {src: 'static/images/color.jpg'})
         this.fbo = twgl.createFramebufferInfo(gl, [{internalFormat: gl.RGBA8, minMag: gl.LINEAR}], 2048, 1.)
         this.colorYOffset = .5
     }
