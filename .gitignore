@@ -5,6 +5,6 @@ output
 __pycache__
 cache
 source-assets/
-static/images/
+# static/images/ - needed for color.jpg texture
 .ipynb_checkpoints/
 static/audio/
